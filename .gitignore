@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.python-version
+.venv/
+venv/
+
+# Node.js
+node_modules/
+
+# Инструменты и кэши
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.cache/
+.playwright/
+.playwright-cli/
+.opencode/
+
+# Секреты и локальные настройки
+.env
+.env.*
+*.local
+state.json
+browser_state/
+
+# Профили и временные данные браузеров
+pw_profile/
+chrome_profile/
+
+# Локальные данные и персональная информация
+*.db
+contacts*.csv
+.obsidian/
+
+# Логи и артефакты ОС
+*.log
+Thumbs.db
+Desktop.ini

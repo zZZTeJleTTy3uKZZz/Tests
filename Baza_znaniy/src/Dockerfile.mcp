@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/playwright:v1.48.2-jammy
+
+# Устанавливаем сам MCP-сервер
+RUN npm install -g @roomi-fields/notebooklm-mcp@latest
+
+# Устанавливаем patchright и его браузеры глобально, чтобы они закэшировались в образе
+RUN npx patchright install chromium
+RUN npx patchright install-deps chromium
+
+# Создаем нужные директории для конфигов, чтобы volume mount не падал
+RUN mkdir -p /root/.local/share/notebooklm-mcp/Data && \
+    mkdir -p /root/.config/notebooklm-mcp/Config
+
+ENV PORT=3000
+ENV HEADLESS=true
+ENV STEALTH_ENABLED=true
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start:http", "--prefix", "/usr/lib/node_modules/@roomi-fields/notebooklm-mcp"]

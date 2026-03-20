@@ -1,0 +1,85 @@
+name: knowledge-base
+
+services:
+  knowledge-base-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: knowledge-base-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./knowledge_base.db:/app/knowledge_base.db
+      - ./app:/app/app
+      - ./main.py:/app/main.py
+      # Монтируем спарсенные документы в API контейнер
+      - ../../docs_parsing:/app/docs
+    environment:
+      - ENVIRONMENT=development
+      - NOTEBOOKLM_API_URL=http://notebooklm-mcp:3000
+    restart: unless-stopped
+    command: sh -c "uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    depends_on:
+      - notebooklm-mcp
+
+  notebooklm-mcp:
+    build:
+      context: ./app/notebooklm-mcp
+      dockerfile: Dockerfile
+    image: notebooklm-mcp:latest
+    container_name: notebooklm-mcp
+    ports:
+      - "3030:3000"
+      - "6080:6080" # noVNC web interface for visual auth
+    volumes:
+      # Main data directory (cookies, library, accounts, browser state)
+      # Используем сохраненную папку сессий
+      - ./app/notebooklm-mcp/deploy-package/data:/data
+      # Монтируем спарсенные документы в MCP контейнер,
+      # чтобы он мог их читать по пути /app/docs, переданному от API
+      - ../../docs_parsing:/app/docs
+    environment:
+      # --- ПРОКСИ ОТ ХОСТА (Hiddify) ---
+      - HTTP_PROXY=socks5://192.168.31.168:12334
+      - HTTPS_PROXY=socks5://192.168.31.168:12334
+      - NO_PROXY=localhost,127.0.0.1,192.168.31.168
+
+      # Server settings
+      - NODE_ENV=production
+      - HTTP_PORT=3000
+      - HTTP_HOST=0.0.0.0
+
+      # Browser settings
+      - HEADLESS=true
+      - STEALTH_ENABLED=true
+
+      # Data directory (inside container)
+      - DATA_DIR=/data
+      - NOTEBOOKLM_UI_LOCALE=en
+
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,168 @@
+<a id="page-98"></a>
+---
+url: https://payloadcms.com/docs/live-preview/overview
+---
+
+# Live Preview
+
+With Live Preview you can render your front-end application directly within the [Admin Panel](../admin/overview). As you type, your changes take effect in real-time. No need to save a draft or publish your changes. This works in both [Server-side](./server) as well as [Client-side](./client) environments.
+
+Live Preview works by rendering an iframe on the page that loads your front-end application. The Admin Panel communicates with your app through [`window.postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage) events. These events are emitted every time a change is made to the Document. Your app then listens for these events and re-renders itself with the data it receives.
+
+To add Live Preview, use the `admin.livePreview` property in your [Payload Config](../configuration/overview):
+```
+import { buildConfig } from 'payload'
+    
+    
+    const config = buildConfig({
+      // ...
+      admin: {
+        // ...
+        livePreview: {
+          url: 'http://localhost:3000',
+          collections: ['pages'],
+        },
+      },
+    })
+```
+
+**Reminder:** Alternatively, you can define the `admin.livePreview` property on individual [Collection Admin Configs](../configuration/collections#admin-options) and [Global Admin Configs](../configuration/globals#admin-options). Settings defined here will be merged into the top-level as overrides.
+
+## [Options](/docs/live-preview/overview#options)
+
+Setting up Live Preview is easy. This can be done either globally through the [Root Admin Config](../admin/overview), or on individual [Collection Admin Configs](../configuration/collections#admin-options) and [Global Admin Configs](../configuration/globals#admin-options). Once configured, a new "Live Preview" button will appear at the top of enabled Documents. Toggling this button opens the preview window and loads your front-end application.
+
+The following options are available:
+
+Path |  Description   
+---|---  
+`**url**` |  String, or function that returns a string, pointing to your front-end application. This value is used as the iframe `src`. More details.   
+`**breakpoints**` |  Array of breakpoints to be used as “device sizes” in the preview window. Each item appears as an option in the toolbar. More details.   
+`**collections**` |  Array of collection slugs to enable Live Preview on.   
+`**globals**` |  Array of global slugs to enable Live Preview on.   
+  
+### [URL](/docs/live-preview/overview#url)
+
+The `url` property resolves to a string that points to your front-end application. This value is used as the `src` attribute of the iframe rendering your front-end. Once loaded, the Admin Panel will communicate directly with your app through `window.postMessage` events.
+
+To set the URL, use the `admin.livePreview.url` property in your [Payload Config](../configuration/overview):
+```
+import { buildConfig } from 'payload'
+    
+    
+    const config = buildConfig({
+      // ...
+      admin: {
+        // ...
+        livePreview: {
+          url: 'http://localhost:3000', 
+          collections: ['pages'],
+        },
+      },
+    })
+```
+
+#### [Dynamic URLs](/docs/live-preview/overview#dynamic-urls)
+
+You can also pass a function in order to dynamically format URLs. This is useful for multi-tenant applications, localization, or any other scenario where the URL needs to be generated based on the Document being edited.
+
+This is also useful for conditionally rendering Live Preview, similar to access control. See [Conditional Rendering](./conditional-rendering) for more details.
+
+To set dynamic URLs, set the `admin.livePreview.url` property in your [Payload Config](../configuration/overview) to a function:
+```
+import { buildConfig } from 'payload'
+    
+    
+    const config = buildConfig({
+      // ...
+      admin: {
+        // ...
+        livePreview: {
+          url: ({ data, collectionConfig, locale }) =>
+            `${data.tenant.url}${
+              collectionConfig.slug === 'posts'
+                ? `/posts/${data.slug}`
+                : `${data.slug !== 'home' ? `/${data.slug}` : ''}`
+            }${locale ? `?locale=${locale?.code}` : ''}`, // Localization query param
+          collections: ['pages'],
+        },
+      },
+    })
+```
+
+The following arguments are provided to the `url` function:
+
+Path |  Description   
+---|---  
+`**data**` |  The data of the Document being edited. This includes changes that have not yet been saved.   
+`**locale**` |  The locale currently being edited (if applicable). [More details](../configuration/localization).   
+`**collectionConfig**` |  The Collection Admin Config of the Document being edited. [More details](../configuration/collections#admin-options).   
+`**globalConfig**` |  The Global Admin Config of the Document being edited. [More details](../configuration/globals#admin-options).   
+`**req**` |  The Payload Request object.   
+  
+You can return either an absolute URL or relative URL from this function. If you don't know the URL of your frontend at build-time, you can return a relative URL, and in that case, Payload will automatically construct an absolute URL by injecting the protocol, domain, and port from your browser window. Returning a relative URL is helpful for platforms like Vercel where you may have preview deployment URLs that are unknown at build time.
+
+If your application requires a fully qualified URL, or you are attempting to preview with a frontend on a different domain, you can use the `req` property to build this URL:
+```
+url: ({ data, req }) => `${req.protocol}//${req.host}/${data.slug}`
+```
+
+#### [Conditional Rendering](/docs/live-preview/overview#conditional-rendering)
+
+You can conditionally render Live Preview by returning `undefined` or `null` from the `url` function. This is similar to access control, where you may want to restrict who can use Live Preview based on certain criteria, such as the current user or document data.
+
+For example, you could check the user's role and only enable Live Preview if they have the appropriate permissions:
+```
+url: ({ req }) => (req.user?.role === 'admin' ? '/hello-world' : null)
+```
+
+### [Breakpoints](/docs/live-preview/overview#breakpoints)
+
+The breakpoints property is an array of objects which are used as “device sizes” in the preview window. Each item will render as an option in the toolbar. When selected, the preview window will resize to the exact dimensions specified in that breakpoint.
+
+To set breakpoints, use the `admin.livePreview.breakpoints` property in your [Payload Config](../configuration/overview):
+```
+import { buildConfig } from 'payload'
+    
+    
+    const config = buildConfig({
+      // ...
+      admin: {
+        // ...
+        livePreview: {
+          url: 'http://localhost:3000',
+          breakpoints: [
+            {
+              label: 'Mobile',
+              name: 'mobile',
+              width: 375,
+              height: 667,
+            },
+          ],
+        },
+      },
+    })
+```
+
+The following options are available for each breakpoint:
+
+Path |  Description   
+---|---  
+`**label**` * |  The label to display in the drop-down. This is what the user will see.   
+`**name**` * |  The name of the breakpoint.   
+`**width**` * |  The width of the breakpoint. This is used to set the width of the iframe.   
+`**height**` * |  The height of the breakpoint. This is used to set the height of the iframe.   
+  
+_* An asterisk denotes that a property is required._
+
+The "Responsive" option is always available in the drop-down and requires no additional configuration. This is the default breakpoint that will be used on initial load. This option styles the iframe with a width and height of `100%` so that it fills the screen at its maximum size and automatically resizes as the window changes size.
+
+You may also explicitly resize the Live Preview by using the corresponding inputs in the toolbar. This will temporarily override the breakpoint selection to "Custom" until a predefined breakpoint is selected once again.
+
+If you prefer to freely resize the Live Preview without the use of breakpoints, you can open it in a new window by clicking the button in the toolbar. This will close the iframe and open a new window which can be resized as you wish. Closing it will automatically re-open the iframe.
+
+## [Example](/docs/live-preview/overview#example)
+
+For a working demonstration of this, check out the official [Live Preview Example](https://github.com/payloadcms/payload/tree/main/examples/live-preview).
+
+[Next Implementing Live Preview in your frontend](/docs/live-preview/frontend)

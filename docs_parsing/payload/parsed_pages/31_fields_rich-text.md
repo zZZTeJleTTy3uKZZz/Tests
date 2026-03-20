@@ -1,0 +1,66 @@
+<a id="page-31"></a>
+---
+url: https://payloadcms.com/docs/fields/rich-text
+---
+
+# Rich Text Field
+
+The Rich Text Field lets editors write and format dynamic content in a familiar interface. The content is saved as JSON in the database and can be converted to HTML or any other format needed.
+
+Consistent with Payload's goal of making you learn as little of Payload as possible, customizing and using the Rich Text Editor does not involve learning how to develop for a Payload rich text editor.
+
+Instead, you can invest your time and effort into learning the underlying open-source tools that will allow you to apply your learnings elsewhere as well.
+
+![Shows a Rich Text field in the Payload Admin Panel](https://l4wlsi8vxy8hre4v.public.blob.vercel-storage.com/lexical-field-demo.jpg)
+
+Admin Panel screenshot of a Rich Text field
+
+## [Config Options](/docs/fields/rich-text#config-options)
+
+Option |  Description   
+---|---  
+`**name**` * |  To be used as the property name when stored and retrieved from the database. [More details](./overview#field-names).   
+`**label**` |  Text used as a field label in the Admin Panel or an object with keys for each language.   
+`**validate**` |  Provide a custom validation function that will be executed on both the Admin Panel and the backend. [More details](./overview#validation).   
+`**saveToJWT**` |  If this field is top-level and nested in a config supporting [Authentication](../authentication/overview), include its data in the user JWT.   
+`**hooks**` |  Provide Field Hooks to control logic for this field. [More details](../hooks/fields).   
+`**access**` |  Provide Field Access Control to denote what users can see and do with this field's data. [More details](../access-control/fields).   
+`**hidden**` |  Restrict this field's visibility from all APIs entirely. Will still be saved to the database, but will not appear in any API or the Admin Panel.   
+`**defaultValue**` |  Provide data to be used for this field's default value. [More details](./overview#default-values).   
+`**localized**` |  Enable localization for this field. Requires [localization to be enabled](../configuration/localization) in the Base config.   
+`**required**` |  Require this field to have a value.   
+`**admin**` |  Admin-specific configuration. More details.   
+`**editor**` |  Customize or override the rich text editor. [More details](../rich-text/overview).   
+`**custom**` |  Extension point for adding custom data (e.g. for plugins)   
+`**typescriptSchema**` |  Override field type generation with providing a JSON schema   
+`**virtual**` |  Provide `true` to disable field in the database, or provide a string path to [link the field with a relationship](../fields/relationship#linking-virtual-fields-with-relationships). See [Virtual Fields](/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges)  
+  
+*_An asterisk denotes that a property is required._
+
+## [ Admin Options](/docs/fields/rich-text#admin-options)
+
+To customize the appearance and behavior of the Rich Text Field in the [Admin Panel](../admin/overview), you can use the `admin` option. The Rich Text Field inherits all the default options from the base [Field Admin Config](./overview#admin-options).
+```
+import type { Field } from 'payload'
+    
+    
+    export const MyRichTextField: Field = {
+      // ...
+      admin: {
+        
+        // ...
+      },
+    }
+```
+
+Further customization can be done with editor-specific options.
+
+## [Editor-specific Options](/docs/fields/rich-text#editor-specific-options)
+
+For a ton more editor-specific options, including how to build custom rich text elements directly into your editor, take a look at the [rich text editor documentation](../rich-text/overview).
+
+[Next Join Field](/docs/fields/join)
+
+#### Related Guides
+
+  * [How to render rich text from Payload in a Next.js frontend ](/posts/guides/how-to-render-rich-text-from-payload-in-a-nextjs-frontend)

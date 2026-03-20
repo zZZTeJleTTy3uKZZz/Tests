@@ -1,0 +1,191 @@
+<a id="page-29"></a>
+---
+url: https://opencode.ai/docs/ru/custom-tools/
+---
+
+# Пользовательские инструменты
+
+Создавайте инструменты, которые LLM может вызывать в opencode.
+
+Пользовательские инструменты — это создаваемые вами функции, которые LLM может вызывать во время разговоров. Они работают вместе со [встроенными инструментами ](/docs/tools) opencode, такими как `read`, `write` и `bash`.
+
+* * *
+
+## Создание инструмента
+
+Инструменты определяются как файлы **TypeScript** или **JavaScript**. Однако определение инструмента может вызывать сценарии, написанные на **любом языке** — TypeScript или JavaScript используются только для самого определения инструмента.
+
+* * *
+
+### Расположение
+
+Их можно определить:
+
+  * Локально, поместив их в каталог `.opencode/tools/` вашего проекта.
+  * Или глобально, поместив их в `~/.config/opencode/tools/`.
+
+
+
+* * *
+
+### Структура
+
+Самый простой способ создания инструментов — использовать помощник `tool()`, который обеспечивает безопасность типов и проверку.
+
+.opencode/tools/database.ts
+```
+import { tool } from "@opencode-ai/plugin"
+    
+    
+    export default tool({
+      description: "Query the project database",
+      args: {
+        query: tool.schema.string().describe("SQL query to execute"),
+      },
+      async execute(args) {
+        // Your database logic here
+        return `Executed query: ${args.query}`
+      },
+    })
+```
+
+**имя файла** становится **именем инструмента**. Вышеупомянутое создает инструмент `database`.
+
+* * *
+
+#### Несколько инструментов в файле
+
+Вы также можете экспортировать несколько инструментов из одного файла. Каждый экспорт становится **отдельным инструментом** с именем **`<filename>_<exportname>`**:
+
+.opencode/tools/math.ts
+```
+import { tool } from "@opencode-ai/plugin"
+    
+    
+    export const add = tool({
+      description: "Add two numbers",
+      args: {
+        a: tool.schema.number().describe("First number"),
+        b: tool.schema.number().describe("Second number"),
+      },
+      async execute(args) {
+        return args.a + args.b
+      },
+    })
+    
+    
+    export const multiply = tool({
+      description: "Multiply two numbers",
+      args: {
+        a: tool.schema.number().describe("First number"),
+        b: tool.schema.number().describe("Second number"),
+      },
+      async execute(args) {
+        return args.a * args.b
+      },
+    })
+```
+
+При этом создаются два инструмента: `math_add` и `math_multiply`.
+
+* * *
+
+### Аргументы
+
+Вы можете использовать `tool.schema`, то есть просто [Zod](https://zod.dev), для определения типов аргументов.
+```
+args: {
+      query: tool.schema.string().describe("SQL query to execute")
+    }
+```
+
+Вы также можете импортировать [Zod](https://zod.dev) напрямую и вернуть простой объект:
+```
+import { z } from "zod"
+    
+    
+    export default {
+      description: "Tool description",
+      args: {
+        param: z.string().describe("Parameter description"),
+      },
+      async execute(args, context) {
+        // Tool implementation
+        return "result"
+      },
+    }
+```
+
+* * *
+
+### Контекст
+
+Инструменты получают контекст текущего сеанса:
+
+.opencode/tools/project.ts
+```
+import { tool } from "@opencode-ai/plugin"
+    
+    
+    export default tool({
+      description: "Get project information",
+      args: {},
+      async execute(args, context) {
+        // Access context information
+        const { agent, sessionID, messageID, directory, worktree } = context
+        return `Agent: ${agent}, Session: ${sessionID}, Message: ${messageID}, Directory: ${directory}, Worktree: ${worktree}`
+      },
+    })
+```
+
+Используйте `context.directory` для рабочего каталога сеанса. Используйте `context.worktree` для корня рабочего дерева git.
+
+* * *
+
+## Примеры
+
+### Инструмент на Python
+
+Вы можете писать свои инструменты на любом языке, который захотите. Вот пример сложения двух чисел с использованием Python.
+
+Сначала создайте инструмент как скрипт Python:
+
+.opencode/tools/add.py
+```
+import sys
+    
+    
+    a = int(sys.argv[1])
+    b = int(sys.argv[2])
+    print(a + b)
+```
+
+Затем создайте определение инструмента, которое его вызывает:
+
+.opencode/tools/python-add.ts
+```
+import { tool } from "@opencode-ai/plugin"
+    import path from "path"
+    
+    
+    export default tool({
+      description: "Add two numbers using Python",
+      args: {
+        a: tool.schema.number().describe("First number"),
+        b: tool.schema.number().describe("Second number"),
+      },
+      async execute(args, context) {
+        const script = path.join(context.worktree, ".opencode/tools/add.py")
+        const result = await Bun.$`python3 ${script} ${args.a} ${args.b}`.text()
+        return result.trim()
+      },
+    })
+```
+
+Здесь мы используем утилиту [`Bun.$`](https://bun.com/docs/runtime/shell) для запуска скрипта Python.
+
+[Редактировать страницу](https://github.com/anomalyco/opencode/edit/dev/packages/web/src/content/docs/ru/custom-tools.mdx)[Found a bug? Open an issue](https://github.com/anomalyco/opencode/issues/new)[Join our Discord community](https://opencode.ai/discord) Выберите язык EnglishالعربيةBosanskiDanskDeutschEspañolFrançaisItaliano日本語한국어Norsk BokmålPolskiPortuguês (Brasil)РусскийไทยTürkçe简体中文繁體中文
+
+© [Anomaly](https://anoma.ly)
+
+Последнее обновление: 21 февр. 2026 г.

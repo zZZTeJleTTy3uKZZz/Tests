@@ -1,0 +1,72 @@
+<a id="page-33"></a>
+---
+url: https://payloadcms.com/docs/fields/row
+---
+
+# Row Field
+
+The Row Field is presentational-only and only affects the [Admin Panel](../admin/overview). By using it, you can arrange [Fields](./overview) next to each other horizontally.
+
+![Shows a row field in the Payload Admin Panel](https://payloadcms.com/images/docs/fields/row.png)
+
+Admin Panel screenshot of a Row field
+
+To add a Row Field, set the `type` to `row` in your [Field Config](./overview):
+```
+import type { Field } from 'payload'
+    
+    
+    export const MyRowField: Field = {
+      // ...
+      type: 'row',
+      fields: [
+        // ...
+      ],
+    }
+```
+
+## [Config Options](/docs/fields/row#config-options)
+
+Option |  Description   
+---|---  
+`**fields**` * |  Array of field types to nest within this Row.   
+`**admin**` |  Admin-specific configuration excluding `description`, `readOnly`, and `hidden`. [More details](./overview#admin-options).   
+`**custom**` |  Extension point for adding custom data (e.g. for plugins)   
+  
+_* An asterisk denotes that a property is required._
+
+## [ Example](/docs/fields/row#example)
+```
+import type { CollectionConfig } from 'payload'
+    
+    
+    export const ExampleCollection: CollectionConfig = {
+      slug: 'example-collection',
+      fields: [
+        {
+          type: 'row', // required
+          fields: [
+            // required
+            {
+              name: 'label',
+              type: 'text',
+              required: true,
+              admin: {
+                width: '50%',
+              },
+            },
+            {
+              name: 'value',
+              type: 'text',
+              required: true,
+              admin: {
+                width: '50%',
+              },
+            },
+          ],
+        },
+      ],
+    }
+```
+
+[Next Select Field](/docs/fields/select)
