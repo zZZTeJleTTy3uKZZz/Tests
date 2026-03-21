@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update, delete
 from typing import List, Optional
 
-from app.db.database import get_db
+from app.db.database import AsyncSessionLocal, get_db
 from app.models.knowledge_base import KnowledgeBaseEntity, DocStatus
 from app.schemas.knowledge_base import (
     KnowledgeBaseCreate,
@@ -17,21 +16,23 @@ router = APIRouter(prefix="/api/v1/docs", tags=["Documentation"])
 
 
 async def background_rag_upload(
-    doc_id: str, file_path: str, tool_name: str, db_session: AsyncSession
+    doc_id: str,
+    file_path: str,
+    tool_name: str,
 ):
-    """Фоновая задача для загрузки документа в NotebookLM через MCP сервер"""
+    """Фоновая задача для загрузки документа в NotebookLM через notebooklm-py."""
     try:
         notebook_id = await process_document_for_rag(doc_id, file_path, tool_name)
 
-        # Обновляем БД: сохраняем ID блокнота и статус
-        query = select(KnowledgeBaseEntity).where(KnowledgeBaseEntity.id == doc_id)
-        result = await db_session.execute(query)
-        db_doc = result.scalar_one_or_none()
+        async with AsyncSessionLocal() as db_session:
+            query = select(KnowledgeBaseEntity).where(KnowledgeBaseEntity.id == doc_id)
+            result = await db_session.execute(query)
+            db_doc = result.scalar_one_or_none()
 
-        if db_doc:
-            db_doc.notebooklm_id = notebook_id
-            db_doc.status = DocStatus.ACTUAL_VERSION
-            await db_session.commit()
+            if db_doc:
+                db_doc.notebooklm_id = notebook_id
+                db_doc.status = DocStatus.ACTUAL_VERSION
+                await db_session.commit()
 
     except Exception as e:
         print(f"Ошибка при загрузке RAG для документа {doc_id}: {e}")
@@ -53,10 +54,11 @@ async def create_doc(
 
     # Если мы создали документ сразу со статусом загрузки, запускаем фоновую задачу
     if db_doc.status == DocStatus.LOADING_TO_RAG and db_doc.local_path:
-        # Для фоновых задач с алхимией лучше создавать новую сессию
-        # Для простоты здесь передается текущая, но в проде нужно использовать AsyncSessionLocal
         background_tasks.add_task(
-            background_rag_upload, db_doc.id, db_doc.local_path, db_doc.name, db
+            background_rag_upload,
+            db_doc.id,
+            db_doc.local_path,
+            db_doc.name,
         )
 
     return db_doc

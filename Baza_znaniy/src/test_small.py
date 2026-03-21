@@ -1,7 +1,6 @@
 import asyncio
-import os
-import sys
-from app.db.database import get_db, AsyncSessionLocal
+
+from app.db.database import AsyncSessionLocal
 from app.models.knowledge_base import KnowledgeBaseEntity, DocStatus
 from app.services.rag_service import process_document_for_rag
 from sqlalchemy import select
@@ -11,8 +10,6 @@ async def main():
     print("--- 1. Создаем тестовую запись в БД ---")
     tool_name = "Tiny_Test"
     file_path = "../../docs_parsing/small_test.md"
-
-    os.environ["NOTEBOOKLM_API_URL"] = "http://localhost:3030"
 
     async with AsyncSessionLocal() as session:
         stmt = select(KnowledgeBaseEntity).where(KnowledgeBaseEntity.name == tool_name)

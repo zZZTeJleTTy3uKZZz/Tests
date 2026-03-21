@@ -1,7 +1,6 @@
 import asyncio
-import os
-import sys
-from app.db.database import get_db, AsyncSessionLocal
+
+from app.db.database import AsyncSessionLocal
 from app.models.knowledge_base import KnowledgeBaseEntity, DocStatus
 from app.services.rag_service import process_document_for_rag
 from sqlalchemy import select
@@ -11,11 +10,6 @@ async def main():
     print("--- 1. Создаем тестовую запись в БД ---")
     tool_name = "Opencode_Prod"
     file_path = "../../docs_parsing/test_opencode.md"
-
-    # Чтобы запускать скрипт напрямую, поправим URL
-    # RAG service берет URL из окружения. В docker-compose он http://notebooklm-mcp:3000
-    # Но мы запускаем скрипт локально, значит нам нужен http://localhost:3030
-    os.environ["NOTEBOOKLM_API_URL"] = "http://localhost:3030"
 
     async with AsyncSessionLocal() as session:
         # Проверим, есть ли уже такая запись

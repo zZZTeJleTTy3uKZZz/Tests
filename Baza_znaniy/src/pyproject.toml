@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.131.0",
     "greenlet>=3.3.2",
     "httpx>=0.28.1",
+    "notebooklm-py[browser]>=0.3.4",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",

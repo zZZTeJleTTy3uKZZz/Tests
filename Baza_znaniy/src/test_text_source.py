@@ -1,32 +1,28 @@
 import asyncio
-import os
-import sys
-import httpx
+
+from app.services.notebooklm_adapter import get_notebooklm_adapter
 
 
 async def main():
     print("--- Запускаем добавление текста в NotebookLM ---")
-    notebook_url = (
-        "https://notebooklm.google.com/notebook/04594cba-567d-4ad6-8852-c12dbdfcff5a"
-    )
-
-    os.environ["NOTEBOOKLM_API_URL"] = "http://localhost:3030"
+    adapter = get_notebooklm_adapter()
 
     with open("../../docs_parsing/small_test.md", "r", encoding="utf-8") as f:
         text_content = f.read()
 
-    print(f"\n--- Отправляем текст в блокнот ---")
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(
-            f"http://localhost:3030/content/sources",
-            json={
-                "source_type": "text",
-                "text": text_content,
-                "notebook_url": notebook_url,
-                "title": "Small Test Text",
-            },
-        )
-        print(resp.json())
+    notebook = await adapter.get_or_create_notebook("Small_Test_Text")
+    source = await adapter.add_text_source(
+        notebook_id=notebook["id"],
+        title="Small Test Text",
+        content=text_content,
+    )
+    print(source)
+
+    result = await adapter.ask_notebook(
+        notebook_id=notebook["id"],
+        question="Кратко ответь, что находится в этом блокноте?",
+    )
+    print(result)
 
 
 if __name__ == "__main__":

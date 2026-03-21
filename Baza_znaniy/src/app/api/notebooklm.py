@@ -1,55 +1,73 @@
-import os
-import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.db.database import get_db
-from app.services.rag_service import process_document_for_rag, NOTEBOOKLM_API_URL
-from app.models.knowledge_base import KnowledgeBaseEntity
+from app.schemas.notebooklm import (
+    NotebookLMAskRequest,
+    NotebookLMAskResponse,
+    NotebookLMBatchAskRequest,
+    NotebookLMBatchAskResponse,
+    NotebookLMHealthResponse,
+    NotebookLMNotebookResponse,
+    NotebookLMReauthRequest,
+    NotebookLMReauthResponse,
+)
+from app.services.notebooklm_adapter import NotebookLMAdapter, get_notebooklm_adapter
 
-router = APIRouter(prefix="/notebooklm", tags=["NotebookLM Integration"])
-
-
-@router.post("/sync-notebooks")
-async def sync_notebooks_with_db(db: AsyncSession = Depends(get_db)):
-    """
-    Скрейпинг актуальных блокнотов из NotebookLM и синхронизация их с базой данных
-    """
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        # Получаем список блокнотов из MCP сервера
-        resp = await client.get(f"{NOTEBOOKLM_API_URL}/notebooks/scrape")
-        resp.raise_for_status()
-        data = resp.json()
-
-        if not data.get("success"):
-            return {
-                "success": False,
-                "error": "Не удалось получить блокноты из NotebookLM",
-            }
-
-        notebooks = data["data"]["notebooks"]
-        updated_count = 0
-
-        # В реальной реализации тут должен быть поиск по БД по имени (name),
-        # и обновление notebooklm_id у найденных записей.
-        # Поскольку у нас пока тестовая версия, мы просто выводим что нашли.
-
-        return {
-            "success": True,
-            "message": f"Найдено {len(notebooks)} блокнотов в NotebookLM. Синхронизация завершена.",
-            "notebooks_found": len(notebooks),
-        }
+router = APIRouter(prefix="/api/v1/notebooklm", tags=["NotebookLM"])
 
 
-@router.post("/ask")
-async def ask_notebooklm(notebook_id: str, question: str):
-    """
-    Эндпоинт-посредник для ИИ-агентов, чтобы задавать вопросы в конкретный блокнот
-    """
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(
-            f"{NOTEBOOKLM_API_URL}/ask",
-            json={"notebook_id": notebook_id, "question": question},
+def _get_adapter() -> NotebookLMAdapter:
+    return get_notebooklm_adapter()
+
+
+@router.get("/health", response_model=NotebookLMHealthResponse)
+async def notebooklm_health(adapter: NotebookLMAdapter = Depends(_get_adapter)):
+    return await adapter.health_check()
+
+
+@router.post("/re-auth", response_model=NotebookLMReauthResponse)
+async def notebooklm_reauth(
+    request: NotebookLMReauthRequest,
+    adapter: NotebookLMAdapter = Depends(_get_adapter),
+):
+    result = await adapter.reauthenticate(
+        timeout_seconds=request.timeout_seconds,
+        headless=request.headless,
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
+@router.get("/notebooks", response_model=list[NotebookLMNotebookResponse])
+async def notebooklm_list_notebooks(adapter: NotebookLMAdapter = Depends(_get_adapter)):
+    return await adapter.list_notebooks()
+
+
+@router.post("/ask", response_model=NotebookLMAskResponse)
+async def ask_notebooklm(
+    request: NotebookLMAskRequest,
+    adapter: NotebookLMAdapter = Depends(_get_adapter),
+):
+    try:
+        return await adapter.ask_notebook(
+            notebook_id=request.notebook_id,
+            question=request.question,
+            source_ids=request.source_ids,
+            conversation_id=request.conversation_id,
         )
-        resp.raise_for_status()
-        return resp.json()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/ask-batch", response_model=NotebookLMBatchAskResponse)
+async def ask_notebooklm_batch(
+    request: NotebookLMBatchAskRequest,
+    adapter: NotebookLMAdapter = Depends(_get_adapter),
+):
+    try:
+        return await adapter.ask_multiple_notebooks(
+            notebook_ids=request.notebook_ids,
+            question=request.question,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
