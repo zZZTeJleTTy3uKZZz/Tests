@@ -11,6 +11,7 @@ PARSERS = {
     "antigravity": "antigravity.parser",
     "payload": "payload.parser",
     "nextjs": "nextjs.parser",
+    "pencil": "pencil.parser",
 }
 
 
